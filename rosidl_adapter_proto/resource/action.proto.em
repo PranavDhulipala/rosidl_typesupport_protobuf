@@ -25,8 +25,11 @@ from rosidl_adapter_proto import PROTO_PACKAGE_POSTFIX
 from rosidl_adapter_proto import MSG_TYPE_TO_PROTO
 from rosidl_adapter_proto import PROTO_ACTION_SEND_GOAL_CALL_NAME
 from rosidl_adapter_proto import PROTO_ACTION_GET_RESULT_CALL_NAME
+from rosidl_adapter_proto import PROTO_ACTION_CANCEL_CALL_NAME
 
 }@
+import "action_msgs/srv/CancelGoal.proto";
+
 option cc_generic_services = true;
 
 @#
@@ -41,7 +44,7 @@ option cc_generic_services = true;
                   action.feedback,
                   action.feedback_message,
                  ]
-]@
+]
 @{
 TEMPLATE(
     'msg.proto.em',
@@ -52,7 +55,7 @@ TEMPLATE(
 }@
 
 
-@[end for]@
+@[end for]
 @#
 @# ================ Service definitions ================
 @#
@@ -60,4 +63,5 @@ service @(action.namespaced_type.name)
 {
   rpc @(PROTO_ACTION_SEND_GOAL_CALL_NAME) (@(action.send_goal_service.request_message.structure.namespaced_type.name)) returns (@(action.send_goal_service.response_message.structure.namespaced_type.name));
   rpc @(PROTO_ACTION_GET_RESULT_CALL_NAME) (@(action.get_result_service.request_message.structure.namespaced_type.name)) returns (@(action.get_result_service.response_message.structure.namespaced_type.name));
+  rpc @(PROTO_ACTION_CANCEL_CALL_NAME) (action_msgs.srv.pb.CancelGoal_Request) returns (action_msgs.srv.pb.CancelGoal_Response);
 }

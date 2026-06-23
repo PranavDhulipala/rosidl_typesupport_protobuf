@@ -35,6 +35,9 @@ PROTO_ACTION_SEND_GOAL_CALL_NAME = 'SendGoal'
 # The rpc function name for retrieving the action result
 PROTO_ACTION_GET_RESULT_CALL_NAME = 'GetResult'
 
+# The rpc function name for canceling an action goal
+PROTO_ACTION_CANCEL_CALL_NAME = 'CancelGoal'
+
 # A Mapping from IDL -> Protobuf type
 MSG_TYPE_TO_PROTO = {
     'boolean':     'bool',
