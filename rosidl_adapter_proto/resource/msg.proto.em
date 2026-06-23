@@ -23,9 +23,14 @@ import rosidl_parser.definition as rosidl
 from rosidl_adapter_proto import PROTO_PACKAGE_POSTFIX
 from rosidl_adapter_proto import MSG_TYPE_TO_PROTO
 from rosidl_adapter_proto import compute_proto_field_number
+from rosidl_adapter_proto import collect_message_enum_info
 
 import sys
 import re
+
+enum_info = collect_message_enum_info(message)
+member_enum_map = enum_info["member_enum_map"]
+enum_definitions = enum_info["definitions"]
 
 }@
 @#
@@ -41,11 +46,64 @@ for annotation in message.structure.annotations:
         comment = "//" + re.sub("\n", "\n// ", annotation.value["text"])
         break
 }@
-@[if comment != ""]@
+@[if comment != ""]
 @(comment)
-@[end if]@
+@[end if]
 message @(message.structure.namespaced_type.name)
 {
+@# Enum definitions derived from ROS constants
+@{
+proto_enum_list = []
+for enum_definition in enum_definitions:
+    proto_enum_value_list = []
+
+    for enum_entry in enum_definition["entries"]:
+        enum_value_dict = {
+            "name": enum_entry["name"],
+            "value": enum_entry["value"],
+            "comments": [],
+        }
+
+        if "ros_value" in enum_entry:
+            enum_value_dict["comments"].append(
+                "    // ROS string value: \"{}\"".format(
+                    re.sub("\n", "\\n", enum_entry["ros_value"])
+                )
+            )
+
+        for annotation in enum_entry["annotations"]:
+            if (annotation.name == "verbatim") \
+                    and ("language" in annotation.value) \
+                    and (annotation.value["language"] == "comment") \
+                    and ("text" in annotation.value):
+                enum_value_dict["comments"].append(
+                    "    //" + re.sub("\n", "\n    // ", annotation.value["text"])
+                )
+                break
+
+        proto_enum_value_list.append(enum_value_dict)
+
+    proto_enum_list.append({
+        "name": enum_definition["name"],
+        "allow_alias": enum_definition["allow_alias"],
+        "values": proto_enum_value_list,
+    })
+}@
+@[for proto_enum in proto_enum_list]
+
+  enum @(proto_enum["name"])
+  {
+@[    if proto_enum["allow_alias"]]
+    option allow_alias = true;
+@[    end if]
+@[    for proto_enum_value in proto_enum["values"]]
+@[      for proto_enum_comment in proto_enum_value["comments"]]
+@(proto_enum_comment)
+@[      end for]
+    @(proto_enum_value["name"]) = @(proto_enum_value["value"]);
+@[    end for]
+  }
+@[end for]
 
 @# Message fields
 @{
@@ -71,7 +129,10 @@ for member in message.structure.members:
 
     # Check for actual datatype
     if isinstance(idl_type, rosidl.BasicType):
-        proto_type = MSG_TYPE_TO_PROTO[idl_type.typename]
+        if (not is_repeated) and (member.name in member_enum_map):
+            proto_type = member_enum_map[member.name]
+        else:
+            proto_type = MSG_TYPE_TO_PROTO[idl_type.typename]
         if idl_type.typename in [rosidl.OCTET_TYPE, 'uint8', 'int8']:
             is_byte_type = True
         elif idl_type.typename in rosidl.CHARACTER_TYPES:
@@ -130,14 +191,14 @@ for member in message.structure.members:
     str_max_len_name         = max(str_max_len_name, len(member.name))
     str_max_len_field_number = max(str_max_len_field_number, len(str(field_number)))
 }@
-@[for proto_member in proto_member_list]@
-@[    if "comment" in proto_member]@
+@[for proto_member in proto_member_list]
+@[    if "comment" in proto_member]
 
 @(proto_member["comment"])
-@[    end if]@
-  @(str.ljust(proto_member["type"], str_max_len_type)) @(str.ljust(proto_member["name"], str_max_len_name)) = @(str.rjust(str(proto_member["field_number"]), str_max_len_field_number));@
-@[    if "unit" in proto_member]@
- // [@(proto_member["unit"])@]@
 @[    end if]
-@[end for]@
+  @(str.ljust(proto_member["type"], str_max_len_type)) @(str.ljust(proto_member["name"], str_max_len_name)) = @(str.rjust(str(proto_member["field_number"]), str_max_len_field_number));@
+@[    if "unit" in proto_member]
+ // [@(proto_member["unit"])]
+@[    end if]
+@[end for]
 }

@@ -1,0 +1,10 @@
+module rosidl_adapter_proto {
+  module EnumStringState_Constants {
+    const string MODE_MANUAL = "MANUAL";
+    const string MODE_AUTO = "AUTO";
+    const string MODE_LOITER = "AUTO";
+  };
+  struct EnumStringState {
+    string mode;
+  };
+};

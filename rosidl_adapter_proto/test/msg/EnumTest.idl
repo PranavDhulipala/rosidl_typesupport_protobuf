@@ -1,0 +1,10 @@
+module rosidl_adapter_proto {
+  module EnumState_Constants {
+    const uint8 STATUS_BOOTING = 0;
+    const uint8 STATUS_RUNNING = 1;
+    const uint8 STATUS_FAILED = 2;
+  };
+  struct EnumState {
+    uint8 status;
+  };
+};

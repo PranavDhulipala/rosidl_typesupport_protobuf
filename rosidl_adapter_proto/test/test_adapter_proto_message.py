@@ -17,6 +17,7 @@
 # ================================= Apache 2.0 =================================
 
 import pathlib
+import json
 
 import pytest
 
@@ -32,6 +33,8 @@ from rosidl_parser.parser import parse_idl_file
 
 MESSAGE_IDL_LOCATOR = IdlLocator(pathlib.Path(__file__).parent,
                                  pathlib.Path('msg') / 'BoolTest.idl')
+TEST_DIR = pathlib.Path(__file__).parent
+RESOURCE_DIR = TEST_DIR.parent / 'resource'
 
 
 @pytest.fixture(scope='module')
@@ -51,6 +54,23 @@ def get_member_name(message_idl_file):
     messages = message_idl_file.content.get_elements_of_type(Message)
     member = messages[0].structure.members[0]
     return member.name
+
+
+def write_generator_arguments(tmp_path, idl_file_name):
+    arguments_file = tmp_path / f'{pathlib.Path(idl_file_name).stem}_arguments.json'
+    arguments = {
+        'package_name': 'rosidl_adapter_proto',
+        'output_dir': str(tmp_path),
+        'template_dir': str(RESOURCE_DIR),
+        'idl_tuples': [
+            f'{TEST_DIR}:msg/{idl_file_name}',
+        ],
+        'target_dependencies': [
+            str(TEST_DIR / 'msg' / idl_file_name),
+        ],
+    }
+    arguments_file.write_text(json.dumps(arguments))
+    return arguments_file
 
 
 def test_message_proto_generated_invalid_argument():
@@ -73,11 +93,9 @@ def test_message_proto_generated_empty_file():
         assert rc is None
 
 
-def test_message_proto_generated(message_idl_file):
-    generate_file_argument = IdlLocator(
-        pathlib.Path(__file__).parent,
-        pathlib.Path('msg') / 'test_rosid_adapter_proto__arguments.json')
-    rc = generate_proto(generate_file_argument.get_absolute_path())
+def test_message_proto_generated(message_idl_file, tmp_path):
+    generate_file_argument = write_generator_arguments(tmp_path, 'BoolTest.idl')
+    rc = generate_proto(generate_file_argument)
 
     assert rc is not None
 
@@ -86,9 +104,7 @@ def test_message_proto_generated(message_idl_file):
     field_number = compute_proto_field_number(member.name)
     proto_type = MSG_TYPE_TO_PROTO[member.type.typename]
 
-    proto_file_name = IdlLocator(
-        pathlib.Path(__file__).parent,
-        pathlib.Path('msg') / 'BoolTest.proto')
+    proto_file_name = IdlLocator(tmp_path, pathlib.Path('msg') / 'BoolTest.proto')
 
     assert search_word(proto_file_name.get_absolute_path(), member.name) is True
     assert search_word(proto_file_name.get_absolute_path(), str(field_number)) is True
@@ -170,3 +186,57 @@ def test_collect_proto_import(message_idl_file):
 def test_collect_proto_import_invalid_argument():
     with pytest.raises(Exception):
         collect_proto_imports('string value')
+
+ENUM_MESSAGE_IDL_LOCATOR = IdlLocator(pathlib.Path(__file__).parent,
+                                      pathlib.Path('msg') / 'EnumTest.idl')
+
+
+@pytest.fixture(scope='module')
+def enum_message_idl_file():
+    return parse_idl_file(ENUM_MESSAGE_IDL_LOCATOR)
+
+
+def test_message_proto_generated_with_enum(enum_message_idl_file, tmp_path):
+    generate_file_argument = write_generator_arguments(tmp_path, 'EnumTest.idl')
+    rc = generate_proto(generate_file_argument)
+
+    assert rc is not None
+
+    proto_file_name = IdlLocator(tmp_path, pathlib.Path('msg') / 'EnumTest.proto')
+
+    proto_file_path = proto_file_name.get_absolute_path()
+    field_number = compute_proto_field_number('status')
+
+    with open(proto_file_path, 'r') as file:
+        content = file.read()
+
+    assert 'enum StatusEnum' in content
+    assert 'STATUS_BOOTING = 0;' in content
+    assert 'STATUS_RUNNING = 1;' in content
+    assert 'STATUS_FAILED = 2;' in content
+    assert f'StatusEnum status = {field_number};' in content
+    assert 'uint32 status = ' not in content
+
+
+def test_message_proto_generated_with_string_enum(enum_message_idl_file, tmp_path):
+    generate_file_argument = write_generator_arguments(tmp_path, 'EnumStringTest.idl')
+    rc = generate_proto(generate_file_argument)
+
+    assert rc is not None
+
+    proto_file_name = IdlLocator(tmp_path, pathlib.Path('msg') / 'EnumStringTest.proto')
+
+    proto_file_path = proto_file_name.get_absolute_path()
+    field_number = compute_proto_field_number('mode')
+
+    with open(proto_file_path, 'r') as file:
+        content = file.read()
+
+    assert 'enum ModeEnum' in content
+    assert 'MODE_MANUAL = 0;' in content
+    assert 'MODE_AUTO = 1;' in content
+    assert 'MODE_LOITER = 1;' in content
+    assert 'option allow_alias = true;' in content
+    assert '// ROS string value: "MANUAL"' in content
+    assert '// ROS string value: "AUTO"' in content
+    assert f'string mode = {field_number};' in content

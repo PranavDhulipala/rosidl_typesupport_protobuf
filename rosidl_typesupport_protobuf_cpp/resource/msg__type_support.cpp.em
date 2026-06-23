@@ -27,6 +27,7 @@ ros_type_ns = ros_type_namespace(package_name, interface_path)
 ros_type_name = ros_type_name(message)
 ros_type = ros_type(package_name, interface_path, message)
 proto_type = protobuf_type(package_name, interface_path, message)
+enum_member_names = message_enum_member_names(message)
 
 system_header_files = [
     'string',
@@ -60,41 +61,47 @@ TEMPLATE(
     forward_declared_types=forward_declared_types
 )
 }@
-@[  for ns in message.structure.namespaced_type.namespaces]@
+@[  for ns in message.structure.namespaced_type.namespaces]
 namespace @(ns)
 {
-@[  end for]@
+@[  end for]
 namespace typesupport_protobuf_cpp
 {
 
 ROSIDL_TYPESUPPORT_PROTOBUF_CPP_PUBLIC__@(package_name)
 bool convert_to_proto(const @(ros_type) &ros_msg, @(proto_type) &pb_msg)
 {
-@[for member in message.structure.members]@
+@[for member in message.structure.members]
   // Member: @(member.name)
-@[  if isinstance(member.type, AbstractNestedType)]@
-@[    if isinstance(member.type.value_type, BasicType) or isinstance(member.type.value_type, AbstractString)]@
+@[  if isinstance(member.type, AbstractNestedType)]
+@[    if isinstance(member.type.value_type, BasicType) or isinstance(member.type.value_type, AbstractString)]
   *pb_msg.mutable_@(member.name)() = { ros_msg.@(member.name).begin(), ros_msg.@(member.name).end() };
-@[    elif isinstance(member.type.value_type, AbstractWString)]@
+@[    elif isinstance(member.type.value_type, AbstractWString)]
   for(auto &member : ros_msg.@(member.name))
   {
     ::rosidl_typesupport_protobuf_cpp::write_to_string(member, *pb_msg.add_@(member.name)());
   }
-@[    elif isinstance(member.type.value_type, NamespacedType)]@
+@[    elif isinstance(member.type.value_type, NamespacedType)]
   for(auto &member : ros_msg.@(member.name))
   {
     auto ptr{pb_msg.add_@(member.name)()};
     @("::" + "::".join(member.type.value_type.namespaces))::typesupport_protobuf_cpp::convert_to_proto(member, *ptr);
   }
-@[    end if]@
-@[  elif isinstance(member.type, BasicType) or isinstance(member.type, AbstractString)]@
+@[    end if]
+@[  elif isinstance(member.type, BasicType)]
+@[    if member.name in enum_member_names]
+  pb_msg.set_@(member.name)(static_cast<decltype(pb_msg.@(member.name)())>(ros_msg.@(member.name)));
+@[    else]
   pb_msg.set_@(member.name)(ros_msg.@(member.name));
-@[  elif isinstance(member.type, BasicType) or isinstance(member.type, AbstractWString)]@
+@[    end if]
+@[  elif isinstance(member.type, AbstractString)]
+  pb_msg.set_@(member.name)(ros_msg.@(member.name));
+@[  elif isinstance(member.type, BasicType) or isinstance(member.type, AbstractWString)]
   ::rosidl_typesupport_protobuf_cpp::write_to_string(ros_msg.@(member.name), *pb_msg.mutable_@(member.name)());
-@[  elif isinstance(member.type, NamespacedType)]@
+@[  elif isinstance(member.type, NamespacedType)]
   @("::" + "::".join(member.type.namespaces))::typesupport_protobuf_cpp::convert_to_proto(ros_msg.@(member.name), *pb_msg.mutable_@(member.name)());
-@[  end if]@
-@[end for]@
+@[  end if]
+@[end for]
 
   return true;
 }
@@ -102,29 +109,29 @@ bool convert_to_proto(const @(ros_type) &ros_msg, @(proto_type) &pb_msg)
 ROSIDL_TYPESUPPORT_PROTOBUF_CPP_PUBLIC__@(package_name)
 bool convert_to_ros(const @(proto_type) &pb_msg, @(ros_type) &ros_msg)
 {
-@[for member in message.structure.members]@
+@[for member in message.structure.members]
   // Member: @(member.name)
-@[  if isinstance(member.type, AbstractNestedType)]@
-@[    if isinstance(member.type.value_type, BasicType) or isinstance(member.type.value_type, AbstractString)]@
-@[      if isinstance(member.type, Array)]@
+@[  if isinstance(member.type, AbstractNestedType)]
+@[    if isinstance(member.type.value_type, BasicType) or isinstance(member.type.value_type, AbstractString)]
+@[      if isinstance(member.type, Array)]
   std::copy_n(pb_msg.@(member.name)().begin(), pb_msg.@(member.name)().size(), ros_msg.@(member.name).begin());
-@[      else]@
-@[        if isinstance(member.type.value_type, BasicType) and member.type.value_type.typename == BOOLEAN_TYPE]@
+@[      else]
+@[        if isinstance(member.type.value_type, BasicType) and member.type.value_type.typename == BOOLEAN_TYPE]
   for(auto val : pb_msg.@(member.name)())
   {
     ros_msg.@(member.name).push_back(val);
   }
-@[        else]@
+@[        else]
   ros_msg.@(member.name) = { pb_msg.@(member.name)().begin(), pb_msg.@(member.name)().end() };
-@[        end if]@
-@[      end if]@
-@[    elif isinstance(member.type.value_type, AbstractWString)]@
+@[        end if]
+@[      end if]
+@[    elif isinstance(member.type.value_type, AbstractWString)]
   {
-@[      if not isinstance(member.type, Array)]@
+@[      if not isinstance(member.type, Array)]
     auto size{pb_msg.@(member.name)_size()};
     ros_msg.@(member.name).resize(size);
 
-@[    end if]@
+@[    end if]
     auto& data{pb_msg.@(member.name)()};
     auto& ros_data{ros_msg.@(member.name)};
     int i{0};
@@ -134,13 +141,13 @@ bool convert_to_ros(const @(proto_type) &pb_msg, @(ros_type) &ros_msg)
       i++;
     }
   }
-@[    elif isinstance(member.type.value_type, NamespacedType)]@
+@[    elif isinstance(member.type.value_type, NamespacedType)]
   {
-@[      if not isinstance(member.type, Array)]@
+@[      if not isinstance(member.type, Array)]
     auto size{pb_msg.@(member.name)_size()};
     ros_msg.@(member.name).resize(size);
 
-@[    end if]@
+@[    end if]
     auto& data{pb_msg.@(member.name)()};
     auto& ros_data{ros_msg.@(member.name)};
     int i{0};
@@ -150,15 +157,21 @@ bool convert_to_ros(const @(proto_type) &pb_msg, @(ros_type) &ros_msg)
       i++;
     }
   }
-@[    end if]@
-@[  elif isinstance(member.type, BasicType) or isinstance(member.type, AbstractString)]@
+@[    end if]
+@[  elif isinstance(member.type, BasicType)]
+@[    if member.name in enum_member_names]
+  ros_msg.@(member.name) = static_cast<decltype(ros_msg.@(member.name))>(pb_msg.@(member.name)());
+@[    else]
   ros_msg.@(member.name) = pb_msg.@(member.name)();
-@[  elif isinstance(member.type, BasicType) or isinstance(member.type, AbstractWString)]@
+@[    end if]
+@[  elif isinstance(member.type, AbstractString)]
+  ros_msg.@(member.name) = pb_msg.@(member.name)();
+@[  elif isinstance(member.type, BasicType) or isinstance(member.type, AbstractWString)]
   ::rosidl_typesupport_protobuf_cpp::write_to_u16string(pb_msg.@(member.name)(), ros_msg.@(member.name));
-@[  elif isinstance(member.type, NamespacedType)]@
+@[  elif isinstance(member.type, NamespacedType)]
   @("::" + "::".join(member.type.namespaces))::typesupport_protobuf_cpp::convert_to_ros(pb_msg.@(member.name)(), ros_msg.@(member.name));
-@[  end if]@
-@[end for]@
+@[  end if]
+@[end for]
 
   return true;
 }
@@ -207,9 +220,9 @@ static rosidl_message_type_support_t @(handle_name) = {
 };
 
 }  // namespace typesupport_protobuf_cpp
-@[  for ns in reversed(message.structure.namespaced_type.namespaces)]@
+@[  for ns in reversed(message.structure.namespaced_type.namespaces)]
 }  // namespace @(ns)
-@[  end for]@
+@[  end for]
 
 namespace rosidl_typesupport_protobuf
 {

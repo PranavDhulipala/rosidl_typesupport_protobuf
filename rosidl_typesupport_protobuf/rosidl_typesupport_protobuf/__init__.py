@@ -17,6 +17,7 @@
 # ================================= Apache 2.0 =================================
 
 from rosidl_cmake import convert_camel_case_to_lower_case_underscore
+import rosidl_parser.definition as rosidl
 
 # A postfix for the protobuf package name / the c++ namespace
 PROTO_PACKAGE_POSTFIX = 'pb'
@@ -136,6 +137,73 @@ def ros_service_type(package_name, interface_path, service):
     ros_type_nm = ros_service_name(service)
     return '::' + _NAMESPACE_DELIMETER.join([ros_type_ns, ros_type_nm])
 
+
+
+
+def _enum_constant_prefix(constant_name):
+    return constant_name.split('_', 1)[0] if '_' in constant_name else constant_name
+
+
+def _member_matches_enum_prefix(member_name, prefix):
+    member_tokens = [token for token in member_name.lower().split('_') if token]
+    prefix_tokens = [token for token in prefix.lower().split('_') if token]
+    if not member_tokens or not prefix_tokens:
+        return False
+    if len(member_tokens) >= len(prefix_tokens) and member_tokens[-len(prefix_tokens):] == prefix_tokens:
+        return True
+    if len(member_tokens) >= len(prefix_tokens) and member_tokens[:len(prefix_tokens)] == prefix_tokens:
+        return True
+    return False
+
+
+def message_enum_member_names(message):
+    assert isinstance(message, rosidl.Message)
+
+    enum_supported_types = {'int8', 'uint8', 'int16', 'uint16', 'int32', 'uint32'}
+    enum_min_value = -(2 ** 31)
+    enum_max_value = (2 ** 31) - 1
+
+    constant_groups = {}
+    for constant in message.constants:
+        prefix = _enum_constant_prefix(constant.name)
+
+        if isinstance(constant.type, rosidl.BasicType):
+            if constant.type.typename not in enum_supported_types:
+                continue
+            if not isinstance(constant.value, int):
+                continue
+            if constant.value < enum_min_value or constant.value > enum_max_value:
+                continue
+            constant_groups.setdefault(('numeric', constant.type.typename, prefix), []).append(constant)
+            continue
+
+        if isinstance(constant.type, rosidl.AbstractString) and isinstance(constant.value, str):
+            constant_groups.setdefault(('string', 'string', prefix), []).append(constant)
+
+    members_by_kind = {}
+    for member in message.structure.members:
+        if isinstance(member.type, rosidl.BasicType):
+            members_by_kind.setdefault(('numeric', member.type.typename), []).append(member.name)
+        elif isinstance(member.type, rosidl.AbstractString):
+            members_by_kind.setdefault(('string', 'string'), []).append(member.name)
+
+    enum_member_names = set()
+    for (enum_kind, type_name, prefix), constants in constant_groups.items():
+        if not constants:
+            continue
+
+        candidate_names = [
+            member_name for member_name in members_by_kind.get((enum_kind, type_name), [])
+            if _member_matches_enum_prefix(member_name, prefix)
+        ]
+
+        if len(candidate_names) != 1:
+            continue
+
+        if enum_kind == 'numeric':
+            enum_member_names.add(candidate_names[0])
+
+    return enum_member_names
 
 def protobuf_type(package_name, interface_path, message):
     namespace = '::'.join([package_name] + list(interface_path.parents[0].parts))
