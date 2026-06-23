@@ -80,6 +80,10 @@ static rosidl_service_type_support_t _@(service.namespaced_type.name)__handle = 
   rosidl_typesupport_protobuf_cpp::identifier,
   &_@(service_name)__callbacks,
   get_service_typesupport_handle_function,
+  nullptr,
+  nullptr,
+  nullptr,
+  nullptr,
 };
 
 }  // namespace typesupport_protobuf_cpp

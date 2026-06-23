@@ -216,7 +216,10 @@ namespaced_handle_name = "::".join([ros_type_ns, "typesupport_protobuf_cpp", han
 static rosidl_message_type_support_t @(handle_name) = {
   rosidl_typesupport_protobuf_cpp::identifier,
   &@(type_support_name),
-  get_message_typesupport_handle_function
+  get_message_typesupport_handle_function,
+  nullptr,
+  nullptr,
+  nullptr,
 };
 
 }  // namespace typesupport_protobuf_cpp
