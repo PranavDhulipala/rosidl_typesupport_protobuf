@@ -21,6 +21,25 @@ find_package(Protobuf REQUIRED)
 find_package(rosidl_adapter_proto REQUIRED)
 find_package(rosidl_typesupport_protobuf REQUIRED)
 
+if(NOT COMMAND ament_target_dependencies)
+  function(ament_target_dependencies target)
+    foreach(dep ${ARGN})
+      if(TARGET ${dep}::${dep})
+        target_link_libraries(${target} ${dep}::${dep})
+      elseif(TARGET ${dep})
+        target_link_libraries(${target} ${dep})
+      endif()
+      if(DEFINED ${dep}_INCLUDE_DIRS)
+        target_include_directories(${target} PUBLIC ${${dep}_INCLUDE_DIRS})
+      endif()
+      if(DEFINED ${dep}_LIBRARIES)
+        target_link_libraries(${target} ${${dep}_LIBRARIES})
+      endif()
+    endforeach()
+  endfunction()
+endif()
+
+
 set(_output_path "${CMAKE_CURRENT_BINARY_DIR}/rosidl_typesupport_protobuf_cpp/${PROJECT_NAME}")
 
 # Create a list of files that will be generated from each IDL file
@@ -160,11 +179,25 @@ ament_target_dependencies(${rosidl_generate_interfaces_TARGET}${_target_suffix}
 
 # Depend on dependencies
 foreach(_pkg_name ${rosidl_generate_interfaces_DEPENDENCY_PACKAGE_NAMES})
-  ament_target_dependencies(${rosidl_generate_interfaces_TARGET}${_target_suffix}
-    ${_pkg_name})
+  set(_dep_include_var "${_pkg_name}_INCLUDE_DIRS")
+  if(DEFINED ${_dep_include_var})
+    target_include_directories(${rosidl_generate_interfaces_TARGET}${_target_suffix}
+      PUBLIC
+      ${${_dep_include_var}}
+    )
+  endif()
+  # Link against protobuf C++ typesupport libraries (backend isolation)
   target_link_libraries(${rosidl_generate_interfaces_TARGET}${_target_suffix}
     ${${_pkg_name}_LIBRARIES${_target_suffix}})
+  # Also link against generator_cpp libraries for required symbols
+  target_link_libraries(${rosidl_generate_interfaces_TARGET}${_target_suffix}
+    ${${_pkg_name}_LIBRARIES__rosidl_generator_cpp})
 endforeach()
+
+# Link against current package's generator_cpp for required symbols
+target_link_libraries(${rosidl_generate_interfaces_TARGET}${_target_suffix}
+  ${rosidl_generate_interfaces_TARGET}__rosidl_generator_cpp
+)
 
 target_link_libraries(${rosidl_generate_interfaces_TARGET}${_target_suffix} ${Protobuf_LIBRARY})
 
