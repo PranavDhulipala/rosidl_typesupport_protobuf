@@ -19,19 +19,19 @@
 }@
 @{
 def is_protobuf_header(header_file):
-  header_file.endswith(".pb.h")
+  return header_file.endswith(".pb.h")
 }
-@[for header_file in system_header_files]@
-@[    if header_file not in include_directives]@
+@[for header_file in system_header_files]
+@[    if header_file not in include_directives]
 @{include_directives.add(header_file)}@
 #include <@(header_file)>
-@[    end if]@
-@[end for]@
+@[    end if]
+@[end for]
 
-@[for header_file in header_files]@
-@[    if header_file not in include_directives]@
+@[for header_file in header_files]
+@[    if header_file not in include_directives]
 @{include_directives.add(header_file)}@
-@[      if is_protobuf_header(header_file)]@
+@[      if is_protobuf_header(header_file)]
 #ifdef _MSC_VER
 #pragma warning(push)
 #pragma warning(disable : 4127 4146 4800)
@@ -40,8 +40,8 @@ def is_protobuf_header(header_file):
 #ifdef _MSC_VER
 #pragma warning(pop)
 #endif
-@[      else]@
+@[      else]
 #include "@(header_file)"
-@[      end if]@
-@[    end if]@
-@[end for]@
+@[      end if]
+@[    end if]
+@[end for]

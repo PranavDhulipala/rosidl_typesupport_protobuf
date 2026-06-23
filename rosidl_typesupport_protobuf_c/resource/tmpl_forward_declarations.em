@@ -47,19 +47,19 @@ for member in message.structure.members:
         types_to_declare.append(member.type.value_type)
         registerDeclaredType(member.type.value_type, forward_declared_types)
 }@
-@[if len(types_to_declare) > 0]@
+@[if len(types_to_declare) > 0]
 // forward declaration of message dependencies and their conversion functions
-@[end if]@
-@[for type_ in types_to_declare]@
+@[end if]
+@[for type_ in types_to_declare]
 @{
 ros_type = ros_type_from_namespaced_type_c(type_)
 proto_type = protobuf_type_from_namespaced_type_c(type_)
 }@
 
-@[  for ns in type_.namespaces]@
+@[  for ns in type_.namespaces]
 namespace @(ns)
 {
-@[  end for]@
+@[  end for]
 namespace typesupport_protobuf_c
 {
 
@@ -67,8 +67,8 @@ bool convert_to_proto(const @(ros_type)&, @(proto_type)&);
 bool convert_to_ros(const @(proto_type)&, @(ros_type)&);
 
 }  // namespace typesupport_protobuf_cpp
-@[  for ns in reversed(type_.namespaces)]@
+@[  for ns in reversed(type_.namespaces)]
 }  // namespace @(ns)
-@[  end for]@
+@[  end for]
 
-@[end for]@
+@[end for]

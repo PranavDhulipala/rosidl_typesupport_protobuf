@@ -49,10 +49,10 @@ TEMPLATE(
 )
 }@
 
-@[for ns in message.structure.namespaced_type.namespaces]@
+@[for ns in message.structure.namespaced_type.namespaces]
 namespace @(ns)
 {
-@[end for]@
+@[end for]
 namespace typesupport_protobuf_cpp
 {
 
@@ -65,9 +65,9 @@ ROSIDL_TYPESUPPORT_PROTOBUF_CPP_PUBLIC__@(package_name)
 convert_to_ros(const @(proto_type) &pb_msg, @(ros_type) &ros_msg);
 
 }  // namespace typesupport_protobuf_cpp
-@[  for ns in reversed(message.structure.namespaced_type.namespaces)]@
+@[  for ns in reversed(message.structure.namespaced_type.namespaces)]
 }  // namespace @(ns)
-@[  end for]@
+@[  end for]
 
 #ifdef __cplusplus
 extern "C"

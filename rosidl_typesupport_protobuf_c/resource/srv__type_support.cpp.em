@@ -63,10 +63,10 @@ TEMPLATE(
     forward_declared_types = forward_declared_types)
 }@
 
-@[for ns in service.namespaced_type.namespaces]@
+@[for ns in service.namespaced_type.namespaces]
 namespace @(ns)
 {
-@[end for]@
+@[end for]
 namespace typesupport_protobuf_c
 {
 
@@ -84,9 +84,9 @@ static rosidl_service_type_support_t _@(service.namespaced_type.name)__handle = 
 };
 
 }  // namespace typesupport_protobuf_c
-@[for ns in reversed(service.namespaced_type.namespaces)]@
+@[for ns in reversed(service.namespaced_type.namespaces)]
 }  // namespace @(ns)
-@[end for]@
+@[end for]
 
 namespace rosidl_typesupport_protobuf
 {

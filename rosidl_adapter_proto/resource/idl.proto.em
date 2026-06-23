@@ -79,15 +79,15 @@ for already_imported_proto_file in already_imported:
     if already_imported_proto_file in proto_import_set:
         proto_import_set.remove(already_imported_proto_file)
 }@
-@[for import_proto_file_path in sorted(proto_import_set)]@
+@[for import_proto_file_path in sorted(proto_import_set)]
 import "@(import_proto_file_path)";
-@[end for]@
+@[end for]
 @#
 @# Newline after import statements
 @#
-@[if len(proto_import_set) != 0]@
+@[if len(proto_import_set) != 0]
 
-@[end if]@
+@[end if]
 @{
 #######################################################################
 # Handle message

@@ -52,7 +52,7 @@ TEMPLATE(
 )
 }@
 
-@[for message in content.get_elements_of_type(Message)]@
+@[for message in content.get_elements_of_type(Message)]
 
 @{
 ros_type_ns = ros_type_namespace(package_name, interface_path)
@@ -89,4 +89,4 @@ struct rclcpp::TypeAdapter<@(proto_type),  @(ros_type)>
 
 RCLCPP_USING_CUSTOM_TYPE_AS_ROS_MESSAGE_TYPE(@(proto_type),  @(ros_type));
 
-@[end for]@
+@[end for]
